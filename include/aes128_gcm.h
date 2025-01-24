@@ -33,13 +33,13 @@
 extern "C" {
 #endif
 
-int aes128_gcm_encrypt(const u8 *key, size_t key_len, const u8 *iv, size_t iv_len,
-	       const u8 *plain, size_t plain_len,
-	       const u8 *aad, size_t aad_len, u8 *crypt, u8 *tag);
+int aes128_gcm_encrypt(const u8 *key, u32 key_len, const u8 *iv, u32 iv_len,
+	       const u8 *plain, u32 plain_len,
+	       const u8 *aad, u32 aad_len, u8 *crypt, u8 *tag);
            
-int aes128_gcm_decrypt(const u8 *key, size_t key_len, const u8 *iv, size_t iv_len,
-	       const u8 *crypt, size_t crypt_len,
-	       const u8 *aad, size_t aad_len, const u8 *tag, u8 *plain);
+int aes128_gcm_decrypt(const u8 *key, u32 key_len, const u8 *iv, u32 iv_len,
+	       const u8 *crypt, u32 crypt_len,
+	       const u8 *aad, u32 aad_len, const u8 *tag, u8 *plain);
            
 #ifdef __cplusplus
 }

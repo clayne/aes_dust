@@ -109,12 +109,12 @@ static void ghash_start(u8 *y) {
     memset(y, 0, 16);
 }
 
-static void ghash(const u8 *h, const u8 *x, size_t xlen, u8 *y) {
-    size_t m = xlen / 16;
+static void ghash(const u8 *h, const u8 *x, u32 xlen, u8 *y) {
+    u32 m = xlen / 16;
     const u8 *xpos = x;
     u8 tmp[16];
 
-    for (size_t i = 0; i < m; i++) {
+    for (u32 i = 0; i < m; i++) {
         xor_block(y, xpos);
         xpos += 16;
         gf_mult(y, h, tmp);
@@ -122,7 +122,7 @@ static void ghash(const u8 *h, const u8 *x, size_t xlen, u8 *y) {
     }
 
     if (x + xlen > xpos) {
-        size_t last = x + xlen - xpos;
+        u32 last = x + xlen - xpos;
         memcpy(tmp, xpos, last);
         memset(tmp + last, 0, sizeof(tmp) - last);
         xor_block(y, tmp);
@@ -131,9 +131,9 @@ static void ghash(const u8 *h, const u8 *x, size_t xlen, u8 *y) {
     }
 }
 
-static void aes_gctr(void *ctx, const u8 *icb, const u8 *x, size_t xlen, u8 *y) {
-    size_t n = xlen / 16;
-    size_t last = xlen % 16;
+static void aes_gctr(void *ctx, const u8 *icb, const u8 *x, u32 xlen, u8 *y) {
+    u32 n = xlen / 16;
+    u32 last = xlen % 16;
     u8 cb[AES_BLK_LEN], tmp[AES_BLK_LEN];
     const u8 *xpos = x;
     u8 *ypos = y;
@@ -144,7 +144,7 @@ static void aes_gctr(void *ctx, const u8 *icb, const u8 *x, size_t xlen, u8 *y) 
 
     memcpy(cb, icb, AES_BLK_LEN);
 
-    for (size_t i = 0; i < n; i++) {
+    for (u32 i = 0; i < n; i++) {
         memcpy(ypos, cb, AES_BLK_LEN);
         aes128_ecb_encrypt(ctx, ypos);
         xor_block(ypos, xpos);
@@ -156,24 +156,24 @@ static void aes_gctr(void *ctx, const u8 *icb, const u8 *x, size_t xlen, u8 *y) 
     if (last) {
         memcpy(tmp, cb, AES_BLK_LEN);
         aes128_ecb_encrypt(ctx, tmp);
-        for (size_t i = 0; i < last; i++) {
+        for (u32 i = 0; i < last; i++) {
             ypos[i] = xpos[i] ^ tmp[i];
         }
     }
 }
 
-static void aes_encrypt_init(aes128_ctx *ctx, const u8 *key, size_t key_len) {
+static void aes_encrypt_init(aes128_ctx *ctx, const u8 *key, u32 key_len) {
     aes128_init_ctx(ctx);
     aes128_set_key(ctx, (void *)key);
 }
 
-static void aes_gcm_init_hash_subkey(aes128_ctx *ctx, const u8 *key, size_t key_len, u8 *H) {
+static void aes_gcm_init_hash_subkey(aes128_ctx *ctx, const u8 *key, u32 key_len, u8 *H) {
     aes_encrypt_init(ctx, key, key_len);
     memset(H, 0, AES_BLK_LEN);
     aes128_ecb_encrypt(ctx, H);
 }
 
-static void aes_gcm_prepare_j0(const u8 *iv, size_t iv_len, const u8 *H, u8 *J0) {
+static void aes_gcm_prepare_j0(const u8 *iv, u32 iv_len, const u8 *H, u8 *J0) {
     u8 len_buf[16];
 
     if (iv_len == 12) {
@@ -189,7 +189,7 @@ static void aes_gcm_prepare_j0(const u8 *iv, size_t iv_len, const u8 *H, u8 *J0)
     }
 }
 
-static void aes_gcm_gctr(void *aes, const u8 *J0, const u8 *in, size_t len, u8 *out) {
+static void aes_gcm_gctr(void *aes, const u8 *J0, const u8 *in, u32 len, u8 *out) {
     u8 J0inc[AES_BLK_LEN];
 
     if (len == 0) {
@@ -201,7 +201,7 @@ static void aes_gcm_gctr(void *aes, const u8 *J0, const u8 *in, size_t len, u8 *
     aes_gctr(aes, J0inc, in, len, out);
 }
 
-static void aes_gcm_ghash(const u8 *H, const u8 *aad, size_t aad_len, const u8 *crypt, size_t crypt_len, u8 *S) {
+static void aes_gcm_ghash(const u8 *H, const u8 *aad, u32 aad_len, const u8 *crypt, u32 crypt_len, u8 *S) {
     u8 len_buf[16];
 
     ghash_start(S);
@@ -212,8 +212,8 @@ static void aes_gcm_ghash(const u8 *H, const u8 *aad, size_t aad_len, const u8 *
     ghash(H, len_buf, sizeof(len_buf), S);
 }
 
-int aes128_gcm_encrypt(const u8 *key, size_t key_len, const u8 *iv, size_t iv_len,
-                       const u8 *plain, size_t plain_len, const u8 *aad, size_t aad_len, u8 *crypt, u8 *tag) {
+int aes128_gcm_encrypt(const u8 *key, u32 key_len, const u8 *iv, u32 iv_len,
+                       const u8 *plain, u32 plain_len, const u8 *aad, u32 aad_len, u8 *crypt, u8 *tag) {
     u8 H[AES_BLK_LEN], J0[AES_BLK_LEN], S[16];
     aes128_ctx ctx;
 
@@ -226,8 +226,8 @@ int aes128_gcm_encrypt(const u8 *key, size_t key_len, const u8 *iv, size_t iv_le
     return 0;
 }
 
-int aes128_gcm_decrypt(const u8 *key, size_t key_len, const u8 *iv, size_t iv_len,
-                       const u8 *crypt, size_t crypt_len, const u8 *aad, size_t aad_len, const u8 *tag, u8 *plain) {
+int aes128_gcm_decrypt(const u8 *key, u32 key_len, const u8 *iv, u32 iv_len,
+                       const u8 *crypt, u32 crypt_len, const u8 *aad, u32 aad_len, const u8 *tag, u8 *plain) {
     u8 H[AES_BLK_LEN], J0[AES_BLK_LEN], S[16], T[16];
     aes128_ctx ctx;
 
