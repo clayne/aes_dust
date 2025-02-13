@@ -36,15 +36,15 @@
     bits 32
     
     %ifndef BIN
-      global _aes_ecb_asm
-      global aes_ecb_asm
+      global _aes_ecb
+      global aes_ecb
     %endif
     
     ; *****************************
-    ; void aes_ecb_asm(void *s);
+    ; void aes_ecb(void *s);
     ; *****************************
-_aes_ecb_asm:
-aes_ecb_asm:
+_aes_ecb:
+aes_ecb:
     pusha
     xor    ecx, ecx           ; ecx = 0
     mul    ecx                ; eax = 0, edx = 0
@@ -266,7 +266,7 @@ aes_l0:
     movsd
     movsd
     ; encrypt t    
-    call   aes_ecb_asm       ; E(t)
+    call   aes_ecb       ; E(t)
     pop    edi
 aes_l1:
     ; xor plaintext with ciphertext

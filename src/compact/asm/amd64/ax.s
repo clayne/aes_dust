@@ -49,7 +49,7 @@
     .endif
 
 // *****************************
-// void aes_ecb_asm(void *s)
+// void aes_ecb(void *s)
 // *****************************
 aes_ecb:
 _aes_ecb:
@@ -319,7 +319,7 @@ aes_l0:
     movsq
     pop    rdi
 // encrypt t    
-    call   aes_ecb_asm
+    call   aes_ecb
 aes_l1:
 // xor plaintext with ciphertext
 // r=len>16?16:len

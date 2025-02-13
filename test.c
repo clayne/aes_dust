@@ -64,7 +64,12 @@ ofb_test(void) {
         aes128_ofb_encrypt(&c, buf, sizeof(buf));
 
         print_hex("Encrypted", buf, AES_BLK_LEN);
-
+        
+        // encryption updates the iv
+        memcpy(c.iv, ofb_iv[i], AES_IV_LEN);
+        
+        aes128_init_ctx(&c);
+        aes128_set_key(&c, key);
         aes128_ofb_decrypt(&c, buf, sizeof(buf));
 
         print_hex("Decrypted", buf, AES_BLK_LEN);
@@ -73,6 +78,128 @@ ofb_test(void) {
         printf("\n Test #%d : %s\n", (i + 1), equ ? "OK" : "FAILED");
     }
     return 0;
+}
+
+#define MCT_ITERATIONS 100
+#define MCT_ROUNDS    1000
+
+// AES-128 OFB MCT Test Vectors
+
+// Key: 89f6806368c130627a98bfb6bb5b1fd7
+static const uint8_t mct_ofb_key[16] = {
+    0x89, 0xf6, 0x80, 0x63, 0x68, 0xc1, 0x30, 0x62,
+    0x7a, 0x98, 0xbf, 0xb6, 0xbb, 0x5b, 0x1f, 0xd7
+};
+
+// IV: b24d13affed86717df32a5b43fa9b859
+static const uint8_t mct_ofb_iv[16] = {
+    0xb2, 0x4d, 0x13, 0xaf, 0xfe, 0xd8, 0x67, 0x17,
+    0xdf, 0x32, 0xa5, 0xb4, 0x3f, 0xa9, 0xb8, 0x59
+};
+
+// Plaintext: 056f3063170450a5ac72c15caa54c690
+static const uint8_t mct_ofb_plain[16] = {
+    0x05, 0x6f, 0x30, 0x63, 0x17, 0x04, 0x50, 0xa5,
+    0xac, 0x72, 0xc1, 0x5c, 0xaa, 0x54, 0xc6, 0x90
+};
+
+// Ciphertext: 6754f2521b14154819b1b4f2a98a89fa
+static const uint8_t mct_ofb_cipher[16] = {
+    0x67, 0x54, 0xf2, 0x52, 0x1b, 0x14, 0x15, 0x48,
+    0x19, 0xb1, 0xb4, 0xf2, 0xa9, 0x8a, 0x89, 0xfa
+};
+
+void aes_monte_carlo_ofb(void)
+{
+    puts("Running MCT test for OFB mode.");
+    
+    // We'll need to remember the last two ciphertext blocks
+    // so that at the end we can do:
+    //   Key[i+1] = Key[i] XOR CT[999]
+    //   IV[i+1]  = CT[999]
+    //   PT[0]    = CT[998]
+    uint8_t last_ct[16]        = {0};
+    uint8_t second_last_ct[16] = {0};
+        
+    // Local copies of the working Key, IV, and Plaintext
+    uint8_t key[16], iv[16], pt[16];
+    
+    memcpy(key, mct_ofb_key, 16);
+    memcpy(iv, mct_ofb_iv, 16);
+    memcpy(pt, mct_ofb_plain, 16);
+
+    // Outer loop: 100 iterations
+    for (int i = 0; i < MCT_ITERATIONS; i++) {
+        // As per pseudo-code: Output Key[i], IV[i], PT[0]
+        // (Here we just print them; adapt as needed.)
+        //print_hex("KEY", key, 16);
+        //print_hex(" IV", iv, 16);
+        //print_hex("PT0", pt, 16);
+
+        // Initialize our AES/OFB context
+        aes128_ctx ctx;
+        aes128_init_ctx(&ctx);
+        aes128_set_key(&ctx, key);
+        aes128_set_iv(&ctx, iv);
+
+        // We maintain a “current plaintext” block that changes each round
+        uint8_t current_pt[16];
+        memcpy(current_pt, pt, 16); // start with PT[0]
+
+        // Inner loop: 1000 rounds
+        for (int j = 0; j < MCT_ROUNDS; j++) {
+            // Encrypt one 16-byte block in OFB mode
+            //   - This will XOR the keystream with current_pt
+            //   - Put the result in current_pt
+            //   - Update the internal IV in ctx for the next block
+            aes128_ofb_encrypt(&ctx, current_pt, 16);
+
+            // Now current_pt holds CT[j].
+            // Save second_last_ct <- last_ct, then last_ct <- current_pt
+            memcpy(second_last_ct, last_ct, 16);
+            memcpy(last_ct, current_pt, 16);
+
+            // According to pseudo-code:
+            //   if j=0:
+            //       PT[j+1] = IV[i]
+            //   else:
+            //       PT[j+1] = CT[j-1]
+            // We interpret that as updating the “current plaintext” for next round.
+            if (j == 0) {
+                // PT[1] = IV
+                memcpy(current_pt, iv, 16);
+            } else {
+                // PT[j+1] = CT[j-1], i.e. the previous ciphertext
+                // which we stored in second_last_ct
+                memcpy(current_pt, second_last_ct, 16);
+            }
+        }
+
+        // After 1000 rounds, last_ct = CT[999], second_last_ct = CT[998].
+        // Output CT[999] (the last ciphertext of this iteration):
+        //print_hex("CT (last)", last_ct, 16);
+
+        // Now update for next iteration (i+1):
+        //   Key[i+1] = Key[i] XOR CT[999]
+        for (int b = 0; b < 16; b++) {
+            key[b] ^= last_ct[b];
+        }
+
+        //   IV[i+1] = CT[999]
+        memcpy(iv, last_ct, 16);
+
+        //   PT[0] = CT[998]
+        memcpy(pt, second_last_ct, 16);
+
+        //printf("--------------------------------------------------\n");
+    }
+    
+    int equ = (memcmp(mct_ofb_cipher, last_ct, sizeof(last_ct)) == 0);
+    
+    print_hex("mct_ofb_cipher", mct_ofb_cipher, sizeof(mct_ofb_cipher));
+    print_hex("last ct", last_ct, sizeof(last_ct));
+    
+    printf("MCT TEST : %s\n", equ ? "OK" : "FAILED");
 }
 
 //
@@ -126,6 +253,118 @@ int cbc_test(void) {
         printf("\n Test #%d : %s\n", (i + 1), equ ? "OK" : "FAILED");
     }
     return 0;
+}
+
+#include <stdint.h>
+
+// AES-128 CBC MCT Test Vectors
+
+// Key: 8809e7dd3a959ee5d8dbb13f501f2274
+static const uint8_t mct_cbc_key[16] = {
+    0x88, 0x09, 0xe7, 0xdd, 0x3a, 0x95, 0x9e, 0xe5,
+    0xd8, 0xdb, 0xb1, 0x3f, 0x50, 0x1f, 0x22, 0x74
+};
+
+// IV: e5c0bb535d7d54572ad06d170a0e58ae
+static const uint8_t mct_cbc_iv[16] = {
+    0xe5, 0xc0, 0xbb, 0x53, 0x5d, 0x7d, 0x54, 0x57,
+    0x2a, 0xd0, 0x6d, 0x17, 0x0a, 0x0e, 0x58, 0xae
+};
+
+// Plaintext: 1fd4ee65603e6130cfc2a82ab3d56c24
+static const uint8_t mct_cbc_plain[16] = {
+    0x1f, 0xd4, 0xee, 0x65, 0x60, 0x3e, 0x61, 0x30,
+    0xcf, 0xc2, 0xa8, 0x2a, 0xb3, 0xd5, 0x6c, 0x24
+};
+
+// Ciphertext: 7bed7671c8913aa1330f193761523e67
+static const uint8_t mct_cbc_cipher[16] = {
+    0x7b, 0xed, 0x76, 0x71, 0xc8, 0x91, 0x3a, 0xa1,
+    0x33, 0x0f, 0x19, 0x37, 0x61, 0x52, 0x3e, 0x67
+};
+
+// ----------------------------------------------------------------
+// Perform the AES-128 CBC Monte Carlo Test
+// ----------------------------------------------------------------
+void aes_monte_carlo_cbc(void)
+{
+    puts("Running MCT test for CBC mode.");
+    
+    // 1) Start with the given key, IV, plaintext
+    uint8_t key[16], iv[16], pt[16], last_ct[16], second_last_ct[16];
+    memcpy(key, mct_cbc_key, sizeof(key));
+    memcpy(iv,  mct_cbc_iv,  sizeof(iv));
+    memcpy(pt,  mct_cbc_plain, sizeof(pt));
+
+    // Outer loop of 100 iterations
+    for (int i = 0; i < MCT_ITERATIONS; i++) {
+        // Print Key[i], IV[i], PT[0]
+        //print_hex("KEY", key, sizeof(key));
+        //print_hex("IV ", iv,  sizeof(iv));
+        //print_hex("PT0", pt,  sizeof(pt));
+
+        // Prepare the AES context
+        aes128_ctx ctx;
+        aes128_init_ctx(&ctx);
+        aes128_set_key(&ctx, key);
+
+        // The “current plaintext” changes each round
+        uint8_t current_pt[16];
+        memcpy(current_pt, pt, sizeof(current_pt)); // Start with PT[0]
+
+        // 2) Inner loop: 1000 single-block encryptions
+        for (int j = 0; j < MCT_ROUNDS; j++) {
+            // If j == 0, use the "outer IV".
+            // If j > 0, use the previous ciphertext as IV (chaining).
+            if (j == 0) {
+                aes128_set_iv(&ctx, iv);
+            } else {
+                aes128_set_iv(&ctx, last_ct);
+            }
+
+            // We'll encrypt exactly 1 block (16 bytes) in CBC mode.
+            // The library call modifies current_pt in place with the ciphertext.
+            aes128_cbc_encrypt(&ctx, current_pt, 16);
+
+            // Now current_pt holds CT[j]. Save for chaining.
+            memcpy(second_last_ct, last_ct, sizeof(second_last_ct));
+            memcpy(last_ct, current_pt, sizeof(last_ct));
+
+            // According to your pseudo-code:
+            //   if j=0 => PT[j+1] = IV[i]
+            //   else   => PT[j+1] = CT[j-1]
+            if (j == 0) {
+                memcpy(current_pt, iv, sizeof(current_pt));
+            } else {
+                memcpy(current_pt, second_last_ct, sizeof(current_pt));
+            }
+        }
+
+        // After 1000 rounds:
+        //   last_ct        = CT[999]
+        //   second_last_ct = CT[998]
+        //print_hex("CT (last)", last_ct, sizeof(last_ct));
+        //printf("-----------------------------------------\n");
+
+        // 3) Update Key, IV, and PT for the next iteration i+1
+        // Key[i+1] = Key[i] XOR CT[999]
+        for (int b = 0; b < 16; b++) {
+            key[b] ^= last_ct[b];
+        }
+
+        // IV[i+1] = CT[999]
+        memcpy(iv, last_ct, sizeof(iv));
+
+        // PT[0] = CT[998]
+        memcpy(pt, second_last_ct, sizeof(pt));
+    }
+    
+    int equ = (memcmp(mct_cbc_cipher, last_ct, sizeof(last_ct)) == 0);
+    
+    print_hex("mct_cbc_cipher", mct_cbc_cipher, sizeof(mct_cbc_cipher));
+    print_hex("last ct", last_ct, sizeof(last_ct));
+    
+    printf("MCT TEST : %s\n", equ ? "OK" : "FAILED");
 }
 
 int gcm_test() {
@@ -185,14 +424,14 @@ int gcm_test() {
         0x31, 0x9e, 0x1d, 0xce, 0x2c, 0xd6, 0xfd, 0x6d
     };
     
-    size_t plaintext_len = sizeof(plaintext);
+    uint32_t plaintext_len = (u32)sizeof(plaintext);
     uint8_t encoded[sizeof(plaintext)]={0};
     uint8_t decoded[sizeof(plaintext)]={0};
     uint8_t tag[16]={0};
 
     // Encrypt
-    printf("Encrypting %zd bytes...\n", plaintext_len);
-    if (aes128_gcm_encrypt(key, sizeof(key), iv, sizeof(iv), plaintext, plaintext_len, aad, sizeof(aad), encoded, tag)) {
+    printf("Encrypting %ld bytes...\n", plaintext_len);
+    if (aes128_gcm_encrypt(key, (u32)sizeof(key), iv, (u32)sizeof(iv), plaintext, plaintext_len, aad, (u32)sizeof(aad), encoded, tag)) {
         printf("Encryption failed.\n");
         return 1;
     }
@@ -349,9 +588,15 @@ int ecb_test(void) {
 int
 main(void) {
     ecb_test();
+    
     cbc_test();
+    aes_monte_carlo_cbc();
+    
     ofb_test();
+    aes_monte_carlo_ofb();
+    
     ctr_test();
+    
     gcm_test();
     
     return 0;

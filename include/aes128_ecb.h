@@ -27,6 +27,8 @@
 #ifndef AES128_ECB_H
 #define AES128_ECB_H
 
+#include <string.h>
+
 #define AES_KEY_LEN 16
 #define AES_BLK_LEN 16 
 #define AES_IV_LEN  16
@@ -52,16 +54,19 @@ extern "C" {
 #endif
 
 void
-aes128_init_ctx(aes128_ctx* c);
+aes128_init_ctx(aes128_ctx*);
 
 void
-aes128_set_key(aes128_ctx* c, void* mk);
+aes128_set_iv(aes128_ctx*, void*);
+
+void
+aes128_set_key(aes128_ctx*, void*);
 
 void 
-aes128_ecb_encrypt(aes128_ctx* c, void* data);
+aes128_ecb_encrypt(aes128_ctx*, void*);
 
 void 
-aes128_ecb_decrypt(aes128_ctx* c, void* data);
+aes128_ecb_decrypt(aes128_ctx*, void*);
 
 #ifdef __cplusplus
 }
