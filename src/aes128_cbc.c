@@ -64,30 +64,44 @@ void aes128_cbc_encrypt(aes128_ctx* c, void* data, u32 len) {
  * @param data  Pointer to the data buffer (ciphertext) to decrypt.
  * @param len   Length in bytes of the data buffer (must be a multiple of AES_BLK_LEN).
  */
-void aes128_cbc_decrypt(aes128_ctx* c, void* data, uint32_t len) {
-    uint8_t *buf = (uint8_t*)data;
-    uint8_t *iv  = c->iv;
-    uint8_t tmp[AES_BLK_LEN];
+void aes128_cbc_decrypt(aes128_ctx* c, void* data, u32 len) {
+    u8 *buf = (u8*)data;
+    u8 prev_iv[AES_BLK_LEN]; // to hold the previous ciphertext block
+    u32 i;
+
+    // Copy the original IV from the context
+    for (i = 0; i < AES_BLK_LEN; i++) {
+        prev_iv[i] = c->iv[i];
+    }
 
     while (len >= AES_BLK_LEN) {
-        // Save the current ciphertext block to tmp 
-        for (u32 i = 0; i < AES_BLK_LEN; i++) tmp[i] = buf[i];
-
-        // Decrypt the block in-place using AES-128 ECB
-        aes128_ecb_decrypt(c, buf);
-
-        // XOR the decrypted block with the IV (or previous ciphertext)
-        for (u32 i = 0; i < AES_BLK_LEN; i++) {
-            buf[i] ^= iv[i];
+        u8 cur_cipher[AES_BLK_LEN];
+        // Save current ciphertext block into cur_cipher
+        for (i = 0; i < AES_BLK_LEN; i++) {
+            cur_cipher[i] = buf[i];
         }
 
-        // Update IV to the ciphertext block we saved in tmp
-        iv = tmp;
+        // Decrypt the block in-place (ECB decryption)
+        aes128_ecb_decrypt(c, buf);
+
+        // XOR decrypted block with the previous ciphertext (or IV for the first block)
+        for (i = 0; i < AES_BLK_LEN; i++) {
+            buf[i] ^= prev_iv[i];
+        }
+
+        // Update prev_iv to current ciphertext block for next iteration
+        for (i = 0; i < AES_BLK_LEN; i++) {
+            prev_iv[i] = cur_cipher[i];
+        }
+
         buf += AES_BLK_LEN;
         len -= AES_BLK_LEN;
     }
 
-    // Update the IV in the AES context
-    for (u32 i=0; i<AES_BLK_LEN; i++) c->iv[i] = iv[i];
+    // Update the IV in the AES context with the last processed ciphertext block
+    for (i = 0; i < AES_BLK_LEN; i++) {
+        c->iv[i] = prev_iv[i];
+    }
 }
+
 
