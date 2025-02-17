@@ -54,21 +54,20 @@ ofb_test(void) {
     for (i = 0; i < 2; i++) {
         memcpy(buf, ofb_plain[i], AES_BLK_LEN);
         memcpy(key, ofb_key[i], AES_KEY_LEN);
-        memcpy(c.iv, ofb_iv[i], AES_IV_LEN);
 
         print_hex("Key", key, AES_KEY_LEN);
         print_hex("Plaintext", buf, AES_BLK_LEN);
 
         aes128_init_ctx(&c);
+        aes128_set_iv(&c, ofb_iv[i]);
         aes128_set_key(&c, key);
         aes128_ofb_encrypt(&c, buf, sizeof(buf));
 
         print_hex("Encrypted", buf, AES_BLK_LEN);
         
         // encryption updates the iv
-        memcpy(c.iv, ofb_iv[i], AES_IV_LEN);
-        
         aes128_init_ctx(&c);
+        aes128_set_iv(&c, ofb_iv[i]);
         aes128_set_key(&c, key);
         aes128_ofb_decrypt(&c, buf, sizeof(buf));
 
@@ -235,16 +234,18 @@ int cbc_test(void) {
     for (i = 0; i < 2; i++) {
         memcpy(buf, cbc_plain[i], AES_BLK_LEN);
         memcpy(key, cbc_key[i], AES_KEY_LEN);
-        memcpy(c.iv, cbc_iv[i], AES_IV_LEN);
 
         print_hex("Key", key, AES_KEY_LEN);
         print_hex("Plaintext", buf, AES_BLK_LEN);
 
         aes128_init_ctx(&c);
+        aes128_set_iv(&c, cbc_iv[i]);
         aes128_set_key(&c, key);
         aes128_cbc_encrypt(&c, buf, sizeof(buf));
 
         print_hex("Encrypted", buf, AES_BLK_LEN);
+        
+        aes128_set_iv(&c, cbc_iv[i]);
         aes128_cbc_decrypt(&c, buf, sizeof(buf));
 
         print_hex("Decrypted", buf, AES_BLK_LEN);
@@ -430,7 +431,7 @@ int gcm_test() {
     uint8_t tag[16]={0};
 
     // Encrypt
-    printf("Encrypting %ld bytes...\n", plaintext_len);
+    printf("Encrypting %d bytes...\n", plaintext_len);
     if (aes128_gcm_encrypt(key, (u32)sizeof(key), iv, (u32)sizeof(iv), plaintext, plaintext_len, aad, (u32)sizeof(aad), encoded, tag)) {
         printf("Encryption failed.\n");
         return 1;
