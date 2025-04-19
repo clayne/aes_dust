@@ -32,27 +32,27 @@
 #endif
 
 /* --- Utility functions for Big-Endian conversions --- */
-static inline u32 GET_BE32(const u8 *a) {
-    return ((u32)a[0] << 24) | ((u32)a[1] << 16) | ((u32)a[2] << 8) | ((u32)a[3]);
+static inline uint32_t GET_BE32(const uint8_t *a) {
+    return ((uint32_t)a[0] << 24) | ((uint32_t)a[1] << 16) | ((uint32_t)a[2] << 8) | ((uint32_t)a[3]);
 }
 
-static inline void PUT_BE32(u8 *a, u32 val) {
-    a[0] = (u8)((val >> 24) & 0xff);
-    a[1] = (u8)((val >> 16) & 0xff);
-    a[2] = (u8)((val >> 8) & 0xff);
-    a[3] = (u8)(val & 0xff);
+static inline void PUT_BE32(uint8_t *a, uint32_t val) {
+    a[0] = (uint8_t)((val >> 24) & 0xff);
+    a[1] = (uint8_t)((val >> 16) & 0xff);
+    a[2] = (uint8_t)((val >> 8) & 0xff);
+    a[3] = (uint8_t)(val & 0xff);
 }
 
-static inline u64 GET_BE64(const u8 *a) {
-    return (((u64)a[0]) << 56) | (((u64)a[1]) << 48) |
-           (((u64)a[2]) << 40) | (((u64)a[3]) << 32) |
-           (((u64)a[4]) << 24) | (((u64)a[5]) << 16) |
-           (((u64)a[6]) << 8)  | ((u64)a[7]);
+static inline uint64_t GET_BE64(const uint8_t *a) {
+    return (((uint64_t)a[0]) << 56) | (((uint64_t)a[1]) << 48) |
+           (((uint64_t)a[2]) << 40) | (((uint64_t)a[3]) << 32) |
+           (((uint64_t)a[4]) << 24) | (((uint64_t)a[5]) << 16) |
+           (((uint64_t)a[6]) << 8)  | ((uint64_t)a[7]);
 }
 
-static inline void PUT_BE64(u8 *a, u64 val) {
+static inline void PUT_BE64(uint8_t *a, uint64_t val) {
     for (int i = 7; i >= 0; --i) {
-        a[i] = (u8)(val & 0xff);
+        a[i] = (uint8_t)(val & 0xff);
         val >>= 8;
     }
 }
@@ -60,14 +60,14 @@ static inline void PUT_BE64(u8 *a, u64 val) {
 /* --- GCM Helper Functions --- */
 
 /* Increment the last 32 bits (big-endian) of a 16-byte block. */
-static void inc32(u8 *block) {
-    u32 val = GET_BE32(block + 12);
+static void inc32(uint8_t *block) {
+    uint32_t val = GET_BE32(block + 12);
     val++;
     PUT_BE32(block + 12, val);
 }
 
 /* XOR two 16-byte blocks (dst ^= src). */
-static void xor_block(u8 *dst, const u8 *src) {
+static void xor_block(uint8_t *dst, const uint8_t *src) {
     for (int i = 0; i < AES_BLK_LEN; i++) {
         dst[i] ^= src[i];
     }
@@ -76,8 +76,8 @@ static void xor_block(u8 *dst, const u8 *src) {
 /* Shift a 16-byte block right by one bit.
  * This function treats the block as four 32-bit big-endian words.
  */
-static void shift_right_block(u8 *v) {
-    u32 val;
+static void shift_right_block(uint8_t *v) {
+    uint32_t val;
     for (int i = 12; i >= 0; i -= 4) {
         val = GET_BE32(v + i);
         val >>= 1;
@@ -90,8 +90,8 @@ static void shift_right_block(u8 *v) {
 /* Multiply two 128-bit values (x and y) in GF(2^128) as used in GCM.
  * z = x * y.
  */
-static void gf_mult(const u8 *x, const u8 *y, u8 *z) {
-    u8 v[16];
+static void gf_mult(const uint8_t *x, const uint8_t *y, uint8_t *z) {
+    uint8_t v[16];
     int i, j;
     memset(z, 0, AES_BLK_LEN);
     memcpy(v, y, AES_BLK_LEN);
@@ -112,19 +112,19 @@ static void gf_mult(const u8 *x, const u8 *y, u8 *z) {
 }
 
 /* Initialize a GHASH accumulator to zero. */
-static void ghash_start(u8 *y) {
+static void ghash_start(uint8_t *y) {
     memset(y, 0, AES_BLK_LEN);
 }
 
 /* Compute GHASH(H, X) where X is xlen bytes.
  * The result is accumulated in y.
  */
-static void ghash(const u8 *h, const u8 *x, u32 xlen, u8 *y) {
-    u32 m = xlen / AES_BLK_LEN;
-    const u8 *xpos = x;
-    u8 tmp[AES_BLK_LEN];
+static void ghash(const uint8_t *h, const uint8_t *x, uint32_t xlen, uint8_t *y) {
+    uint32_t m = xlen / AES_BLK_LEN;
+    const uint8_t *xpos = x;
+    uint8_t tmp[AES_BLK_LEN];
 
-    for (u32 i = 0; i < m; i++) {
+    for (uint32_t i = 0; i < m; i++) {
         xor_block(y, xpos);
         xpos += AES_BLK_LEN;
         gf_mult(y, h, tmp);
@@ -146,19 +146,19 @@ static void ghash(const u8 *h, const u8 *x, u32 xlen, u8 *y) {
  * Given an initial counter block (icb), encrypt x (of length xlen bytes)
  * to produce output y.
  */
-static void aes_gctr(void *ctx, const u8 *icb, const u8 *x, u32 xlen, u8 *y) {
-    u32 n = xlen / AES_BLK_LEN;
-    u32 last = xlen % AES_BLK_LEN;
-    u8 cb[AES_BLK_LEN], tmp[AES_BLK_LEN];
-    const u8 *xpos = x;
-    u8 *ypos = y;
+static void aes_gctr(void *ctx, const uint8_t *icb, const uint8_t *x, uint32_t xlen, uint8_t *y) {
+    uint32_t n = xlen / AES_BLK_LEN;
+    uint32_t last = xlen % AES_BLK_LEN;
+    uint8_t cb[AES_BLK_LEN], tmp[AES_BLK_LEN];
+    const uint8_t *xpos = x;
+    uint8_t *ypos = y;
 
     if (xlen == 0)
         return;
 
     memcpy(cb, icb, AES_BLK_LEN);
 
-    for (u32 i = 0; i < n; i++) {
+    for (uint32_t i = 0; i < n; i++) {
         memcpy(ypos, cb, AES_BLK_LEN);
         aes128_ecb_encrypt(ctx, ypos);
         xor_block(ypos, xpos);
@@ -170,7 +170,7 @@ static void aes_gctr(void *ctx, const u8 *icb, const u8 *x, u32 xlen, u8 *y) {
     if (last) {
         memcpy(tmp, cb, AES_BLK_LEN);
         aes128_ecb_encrypt(ctx, tmp);
-        for (u32 i = 0; i < last; i++) {
+        for (uint32_t i = 0; i < last; i++) {
             ypos[i] = xpos[i] ^ tmp[i];
         }
     }
@@ -179,7 +179,7 @@ static void aes_gctr(void *ctx, const u8 *icb, const u8 *x, u32 xlen, u8 *y) {
 /* --- Initialization Helpers --- */
 
 /* Initialize the AES context with the given key. */
-static void aes_encrypt_init(aes128_ctx *ctx, const u8 *key, u32 key_len) {
+static void aes_encrypt_init(aes128_ctx *ctx, const uint8_t *key, uint32_t key_len) {
     aes128_init_ctx(ctx);
     aes128_set_key(ctx, (void *)key);
 }
@@ -187,7 +187,7 @@ static void aes_encrypt_init(aes128_ctx *ctx, const u8 *key, u32 key_len) {
 /* Initialize the hash subkey H for GCM.
  * H = AES-128(0^128)
  */
-static void aes_gcm_init_hash_subkey(aes128_ctx *ctx, const u8 *key, u32 key_len, u8 *H) {
+static void aes_gcm_init_hash_subkey(aes128_ctx *ctx, const uint8_t *key, uint32_t key_len, uint8_t *H) {
     aes_encrypt_init(ctx, key, key_len);
     memset(H, 0, AES_BLK_LEN);
     aes128_ecb_encrypt(ctx, H);
@@ -197,8 +197,8 @@ static void aes_gcm_init_hash_subkey(aes128_ctx *ctx, const u8 *key, u32 key_len
  * If IV is 12 bytes, then J0 = IV || 0x00000001.
  * Otherwise, J0 = GHASH(H, IV || padding || [0^64 || (IV_bit_length)]).
  */
-static void aes_gcm_prepare_j0(const u8 *iv, u32 iv_len, const u8 *H, u8 *J0) {
-    u8 len_buf[AES_BLK_LEN];
+static void aes_gcm_prepare_j0(const uint8_t *iv, uint32_t iv_len, const uint8_t *H, uint8_t *J0) {
+    uint8_t len_buf[AES_BLK_LEN];
 
     if (iv_len == 12) {
         memcpy(J0, iv, iv_len);
@@ -215,8 +215,8 @@ static void aes_gcm_prepare_j0(const u8 *iv, u32 iv_len, const u8 *H, u8 *J0) {
 
 /* A helper that increments J0 and then calls GCTR.
  */
-static void aes_gcm_gctr(void *aes, const u8 *J0, const u8 *in, u32 len, u8 *out) {
-    u8 J0inc[AES_BLK_LEN];
+static void aes_gcm_gctr(void *aes, const uint8_t *J0, const uint8_t *in, uint32_t len, uint8_t *out) {
+    uint8_t J0inc[AES_BLK_LEN];
 
     if (len == 0)
         return;
@@ -229,9 +229,9 @@ static void aes_gcm_gctr(void *aes, const u8 *J0, const u8 *in, u32 len, u8 *out
 /* Compute GHASH over AAD and ciphertext.
  * S = GHASH(H, AAD || C || [bit lengths])
  */
-static void aes_gcm_ghash(const u8 *H, const u8 *aad, u32 aad_len,
-                          const u8 *crypt, u32 crypt_len, u8 *S) {
-    u8 len_buf[AES_BLK_LEN];
+static void aes_gcm_ghash(const uint8_t *H, const uint8_t *aad, uint32_t aad_len,
+                          const uint8_t *crypt, uint32_t crypt_len, uint8_t *S) {
+    uint8_t len_buf[AES_BLK_LEN];
 
     ghash_start(S);
     ghash(H, aad, aad_len, S);
@@ -254,10 +254,10 @@ static void aes_gcm_ghash(const u8 *H, const u8 *aad, u32 aad_len,
  *   tag: Authentication tag (16 bytes).
  * Returns 0 on success.
  */
-int aes128_gcm_encrypt(const u8 *key, u32 key_len, const u8 *iv, u32 iv_len,
-                       const u8 *plain, u32 plain_len, const u8 *aad, u32 aad_len,
-                       u8 *crypt, u8 *tag) {
-    u8 H[AES_BLK_LEN], J0[AES_BLK_LEN], S[AES_BLK_LEN];
+int aes128_gcm_encrypt(const uint8_t *key, uint32_t key_len, const uint8_t *iv, uint32_t iv_len,
+                       const uint8_t *plain, uint32_t plain_len, const uint8_t *aad, uint32_t aad_len,
+                       uint8_t *crypt, uint8_t *tag) {
+    uint8_t H[AES_BLK_LEN], J0[AES_BLK_LEN], S[AES_BLK_LEN];
     aes128_ctx ctx;
 
     aes_gcm_init_hash_subkey(&ctx, key, key_len, H);
@@ -280,10 +280,10 @@ int aes128_gcm_encrypt(const u8 *key, u32 key_len, const u8 *iv, u32 iv_len,
  *   plain: Decrypted plaintext (same length as ciphertext).
  * Returns 0 if authentication succeeds, -1 if authentication fails.
  */
-int aes128_gcm_decrypt(const u8 *key, u32 key_len, const u8 *iv, u32 iv_len,
-                       const u8 *crypt, u32 crypt_len, const u8 *aad, u32 aad_len,
-                       const u8 *tag, u8 *plain) {
-    u8 H[AES_BLK_LEN], J0[AES_BLK_LEN], S[AES_BLK_LEN], T[AES_BLK_LEN];
+int aes128_gcm_decrypt(const uint8_t *key, uint32_t key_len, const uint8_t *iv, uint32_t iv_len,
+                       const uint8_t *crypt, uint32_t crypt_len, const uint8_t *aad, uint32_t aad_len,
+                       const uint8_t *tag, uint8_t *plain) {
+    uint8_t H[AES_BLK_LEN], J0[AES_BLK_LEN], S[AES_BLK_LEN], T[AES_BLK_LEN];
     aes128_ctx ctx;
 
     aes_gcm_init_hash_subkey(&ctx, key, key_len, H);

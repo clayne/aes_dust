@@ -28,26 +28,56 @@
 #define AES128_ECB_H
 
 #include <string.h>
+#include <stdint.h>
+
+#if defined(_MSC_VER)            /* any flavour of MSVC / clang‑cl */
+#   define ALIGN16 __declspec(align(16))
+
+#elif defined(__GNUC__) || defined(__clang__)
+        /*  GCC, Clang and their cousins (including ICC when –gcc‑compat)  */
+#   define ALIGN16 __attribute__((aligned(16)))
+
+#else
+    /*  C11/C++11 provide an intrinsic keyword; fall back to that if the
+        compiler is neither MSVC nor GCC/Clang but still understands it.   */
+#   if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+#       define ALIGN16 _Alignas(16)
+#   elif defined(__cplusplus) && (__cplusplus >= 201103L)
+#       include <cstddef>         /* alignas */
+#       define ALIGN16 alignas(16)
+#   else
+#       error "ALIGN16: unknown compiler—please add alignment syntax here"
+#   endif
+#endif
 
 #define AES_KEY_LEN 16
 #define AES_BLK_LEN 16 
 #define AES_IV_LEN  16
 #define AES_CTR_LEN 16
 
-#define R(v,n)(((v)>>(n))|((v)<<(32-(n))))
+typedef union _aes_blk_t {
+    uint8_t b[AES_BLK_LEN];
+    uint16_t h[AES_BLK_LEN/2];
+    uint32_t w[AES_BLK_LEN/4];
+    uint64_t q[AES_BLK_LEN/8];
+} aes_blk_t;
 
-typedef unsigned char u8;
-typedef unsigned int u32;
-typedef unsigned long long u64;
+typedef union _aes_key_t {
+    uint8_t b[AES_KEY_LEN];
+    uint16_t h[AES_KEY_LEN/2];
+    uint32_t w[AES_KEY_LEN/4];
+    uint64_t q[AES_KEY_LEN/8];
+} aes_key_t;
 
 typedef struct _aes128_ctx {
-    u8 sbox[256];
-    u8 sbox_inv[256];
+    uint8_t sbox[256];
+    uint8_t sbox_inv[256];
     
-    u8 ctr[AES_CTR_LEN];
-    u8 iv[AES_IV_LEN];
-    u8 rkeys[11][AES_KEY_LEN];
+    uint8_t ctr[AES_CTR_LEN];
+    uint8_t iv[AES_IV_LEN];
+    aes_key_t rkeys[11];
 } aes128_ctx;
+
 
 #ifdef __cplusplus
 extern "C" {

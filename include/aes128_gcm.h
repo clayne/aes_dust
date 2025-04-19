@@ -27,19 +27,19 @@
 #ifndef AES128_GCM_H
 #define AES128_GCM_H
 
-#include "aes128_ecb.h"
+#include <aes128_ecb.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int aes128_gcm_encrypt(const u8 *key, u32 key_len, const u8 *iv, u32 iv_len,
-	       const u8 *plain, u32 plain_len,
-	       const u8 *aad, u32 aad_len, u8 *crypt, u8 *tag);
+int aes128_gcm_encrypt(const uint8_t *key, uint32_t key_len, const uint8_t *iv, uint32_t iv_len,
+	       const uint8_t *plain, uint32_t plain_len,
+	       const uint8_t *aad, uint32_t aad_len, uint8_t *crypt, uint8_t *tag);
            
-int aes128_gcm_decrypt(const u8 *key, u32 key_len, const u8 *iv, u32 iv_len,
-	       const u8 *crypt, u32 crypt_len,
-	       const u8 *aad, u32 aad_len, const u8 *tag, u8 *plain);
+int aes128_gcm_decrypt(const uint8_t *key, uint32_t key_len, const uint8_t *iv, uint32_t iv_len,
+	       const uint8_t *crypt, uint32_t crypt_len,
+	       const uint8_t *aad, uint32_t aad_len, const uint8_t *tag, uint8_t *plain);
            
 #ifdef __cplusplus
 }

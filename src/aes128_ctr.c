@@ -56,9 +56,9 @@ void aes128_ctr_set(aes128_ctx* c, const void* nonce) {
  *
  * @return      1 on success, or 0 if the 4-byte counter overflows.
  */
-int aes128_ctr_encrypt(aes128_ctx* c, void* data, u32 len) {
-    u8 keystream[AES_BLK_LEN];
-    u8 *p = (u8*)data;
+int aes128_ctr_encrypt(aes128_ctx* c, void* data, uint32_t len) {
+    uint8_t keystream[AES_BLK_LEN];
+    uint8_t *p = (uint8_t*)data;
 
     while (len > 0) {
         // Prepare the keystream block by copying the current 16-byte counter block.
@@ -68,10 +68,10 @@ int aes128_ctr_encrypt(aes128_ctx* c, void* data, u32 len) {
         aes128_ecb_encrypt(c, keystream);
 
         // Determine the number of bytes to process in this block.
-        u32 block_bytes = (len > AES_BLK_LEN) ? AES_BLK_LEN : len;
+        uint32_t block_bytes = (len > AES_BLK_LEN) ? AES_BLK_LEN : len;
 
         // XOR the keystream with the plaintext (or ciphertext).
-        for (u32 i = 0; i < block_bytes; i++) {
+        for (uint32_t i = 0; i < block_bytes; i++) {
             p[i] ^= keystream[i];
         }
 
@@ -109,6 +109,6 @@ int aes128_ctr_encrypt(aes128_ctx* c, void* data, u32 len) {
  *
  * @return      1 on success, or 0 if the counter overflows.
  */
-int aes128_ctr_decrypt(aes128_ctx* c, void* data, u32 len) {
+int aes128_ctr_decrypt(aes128_ctx* c, void* data, uint32_t len) {
     return aes128_ctr_encrypt(c, data, len);
 }

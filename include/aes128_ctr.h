@@ -27,15 +27,15 @@
 #ifndef AES128_CTR_H
 #define AES128_CTR_H
 
-#include "aes128_ecb.h"
+#include <aes128_ecb.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 void aes128_ctr_set(aes128_ctx* c, const void* nonce);
-int aes128_ctr_encrypt(aes128_ctx* c, void* data,  u32 len);
-int aes128_ctr_decrypt(aes128_ctx* c, void* data,  u32 len);
+int aes128_ctr_encrypt(aes128_ctx* c, void* data,  uint32_t len);
+int aes128_ctr_decrypt(aes128_ctx* c, void* data,  uint32_t len);
 
 #ifdef __cplusplus
 }

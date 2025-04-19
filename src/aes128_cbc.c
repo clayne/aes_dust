@@ -34,13 +34,13 @@
  * @param data  Pointer to the data buffer (plaintext) to encrypt.
  * @param len   Length in bytes of the data buffer (must be a multiple of AES_BLK_LEN).
  */
-void aes128_cbc_encrypt(aes128_ctx* c, void* data, u32 len) {
-    u8 *buf = (u8*)data;
-    u8 *iv  = c->iv;
+void aes128_cbc_encrypt(aes128_ctx* c, void* data, uint32_t len) {
+    uint8_t *buf = (uint8_t*)data;
+    uint8_t *iv  = c->iv;
 
     while (len >= AES_BLK_LEN) {
         // XOR the current plaintext block with the IV (or previous ciphertext)
-        for (u32 i = 0; i < AES_BLK_LEN; i++) {
+        for (uint32_t i = 0; i < AES_BLK_LEN; i++) {
             buf[i] ^= iv[i];
         }
         // Encrypt the block in-place using AES-128 ECB
@@ -53,7 +53,7 @@ void aes128_cbc_encrypt(aes128_ctx* c, void* data, u32 len) {
     }
 
     // Update the IV in the AES context
-    for (u32 i=0; i<AES_BLK_LEN; i++) c->iv[i] = iv[i];
+    for (uint32_t i=0; i<AES_BLK_LEN; i++) c->iv[i] = iv[i];
 }
 
 
@@ -64,8 +64,8 @@ void aes128_cbc_encrypt(aes128_ctx* c, void* data, u32 len) {
  * @param data  Pointer to the data buffer (ciphertext) to decrypt.
  * @param len   Length in bytes of the data buffer (must be a multiple of AES_BLK_LEN).
  */
-void aes128_cbc_decrypt(aes128_ctx* c, void* data, u32 len) {
-    u8 i, tmp[AES_BLK_LEN], *buf = (u8*)data, *iv = c->iv;
+void aes128_cbc_decrypt(aes128_ctx* c, void* data, uint32_t len) {
+    uint8_t i, tmp[AES_BLK_LEN], *buf = (uint8_t*)data, *iv = c->iv;
 
     while (len >= AES_BLK_LEN) {
         // Copy ciphertext to local buffer.

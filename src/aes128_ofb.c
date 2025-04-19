@@ -34,8 +34,8 @@
  * @param data  Pointer to the data buffer to encrypt or decrypt.
  * @param len   Number of bytes in the data buffer.
  */
-void aes128_ofb_encrypt(aes128_ctx *c, void *data, u32 len) {
-    u8 i, r, t[AES_BLK_LEN], * p = data, *iv = c->iv;
+void aes128_ofb_encrypt(aes128_ctx *c, void *data, uint32_t len) {
+    uint8_t i, r, t[AES_BLK_LEN], * p = data, *iv = c->iv;
 
     // copy IV to local buffer
     for (i = 0; i < AES_BLK_LEN; i++)t[i] = iv[i];
@@ -59,6 +59,6 @@ void aes128_ofb_encrypt(aes128_ctx *c, void *data, u32 len) {
  * Decrypt data in-place using AES-128 in Output Feedback (OFB) mode.
  * OFB mode encryption and decryption are identical operations.
  */
-void aes128_ofb_decrypt(aes128_ctx *c, void *data, u32 len) {
+void aes128_ofb_decrypt(aes128_ctx *c, void *data, uint32_t len) {
     aes128_ofb_encrypt(c, data, len);
 }

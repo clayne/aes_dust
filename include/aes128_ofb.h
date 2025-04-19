@@ -27,17 +27,17 @@
 #ifndef AES128_OFB_H
 #define AES128_OFB_H
 
-#include "aes128_ecb.h"
+#include <aes128_ecb.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 void 
-aes128_ofb_encrypt(aes128_ctx* c, void* data,  u32 len);
+aes128_ofb_encrypt(aes128_ctx* c, void* data,  uint32_t len);
 
 void 
-aes128_ofb_decrypt(aes128_ctx* c, void* data,  u32 len);
+aes128_ofb_decrypt(aes128_ctx* c, void* data,  uint32_t len);
 
 #ifdef __cplusplus
 }
